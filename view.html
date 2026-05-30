@@ -130,8 +130,6 @@
 
 <header>
   <div class="logo">Compound<span>Map</span></div>
-  <div class="mode-badge">Live View</div>
-  <button class="btn-success" id="btn-update">⟳ Update Map</button>
 </header>
 
 <div class="main">
@@ -223,10 +221,6 @@ function renderAllMarkers() {
   markers = {};
   nodes.forEach(node => {
     const marker = L.marker([node.lat, node.lng], { icon: makeIcon(node) }).addTo(map);
-    marker.bindPopup(`
-      <div class="popup-id">#${node.id}</div>
-      <div><span class="popup-intensity" style="${intensityBadgeStyle(node.intensity)}">${node.intensity}</span></div>
-    `);
     markers[node.id] = marker;
   });
   updateCounts();
@@ -264,7 +258,6 @@ async function fetchNodes() {
   }
 }
 
-document.getElementById('btn-update').onclick = fetchNodes;
 
 // ── Toast ─────────────────────────────────────
 let toastTimer;
