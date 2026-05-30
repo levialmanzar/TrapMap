@@ -202,8 +202,8 @@
   <div class="sidebar">
     <!-- Config -->
     <div class="sidebar-section">
-      <div class="sidebar-label">Google Sheet CSV URL</div>
-      <input class="config-input" id="sheet-url" placeholder="Paste published CSV URL…" />
+      <div class="sidebar-label">Apps Script URL</div>
+      <input class="config-input" id="sheet-url" placeholder="Paste deployed script URL…" />
       <div style="margin-top:8px; display:flex; gap:6px;">
         <button class="btn-primary" style="flex:1;font-size:10px;" id="btn-save-config">Save</button>
         <button class="btn-ghost" style="font-size:10px;" id="btn-test-sheet">Test</button>
@@ -277,35 +277,25 @@
 // ─────────────────────────────────────────────
 // CONFIG & STATE
 // ─────────────────────────────────────────────
-const STORAGE_KEY = 'compoundmap_nodes';
-const CONFIG_KEY  = 'compoundmap_config';
+const CONFIG_KEY = 'compoundmap_config';
 const INTENSITY_COLORS = {
   none: '#6b7494', light: '#f0c040', medium: '#f07030', extreme: '#e03040'
 };
 
-let nodes = [];        // [{id, intensity, lat, lng}]
-let markers = {};      // id -> leaflet marker
-let editingId = null;  // null = new node, number = editing existing
+let nodes = [];
+let markers = {};
+let editingId = null;
 let pendingLatLng = null;
-let sheetUrl = '';
+let scriptUrl = '';
 
-// ─────────────────────────────────────────────
-// PERSIST
-// ─────────────────────────────────────────────
-function saveNodes() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes));
-}
-function loadNodes() {
-  try { nodes = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { nodes = []; }
-}
 function saveConfig() {
-  localStorage.setItem(CONFIG_KEY, JSON.stringify({ sheetUrl }));
+  localStorage.setItem(CONFIG_KEY, JSON.stringify({ scriptUrl }));
 }
 function loadConfig() {
   try {
     const c = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {};
-    sheetUrl = c.sheetUrl || '';
-    document.getElementById('sheet-url').value = sheetUrl;
+    scriptUrl = c.scriptUrl || '';
+    document.getElementById('sheet-url').value = scriptUrl;
   } catch(e) {}
 }
 
@@ -375,7 +365,7 @@ function addMarker(node) {
   marker.on('dragend', function(e) {
     const ll = e.target.getLatLng();
     const n = nodes.find(x => x.id === node.id);
-    if (n) { n.lat = ll.lat; n.lng = ll.lng; saveNodes(); }
+    if (n) { n.lat = ll.lat; n.lng = ll.lng; pushNode(n); }
   });
 
   markers[node.id] = marker;
@@ -468,124 +458,88 @@ document.getElementById('modal-save').onclick = function() {
   idInput.classList.remove('error'); errEl.classList.remove('show');
 
   if (editingId !== null) {
-    // Edit existing
     const n = nodes.find(x => x.id === editingId);
     if (n) {
       removeMarker(editingId);
       n.id = newId; n.intensity = selectedIntensity;
       delete markers[editingId];
       addMarker(n);
+      pushNode(n);
     }
   } else {
-    // New node
     const node = { id: newId, intensity: selectedIntensity, lat: pendingLatLng.lat, lng: pendingLatLng.lng };
     nodes.push(node);
     addMarker(node);
-    syncNewNodeToSheet(node);
+    pushNode(node);
   }
 
-  saveNodes(); updateSidebar(); closeModal();
+  updateSidebar(); closeModal();
   toast(`Node #${newId} saved`, 'success');
 };
 
 document.getElementById('modal-delete').onclick = function() {
   if (!confirm(`Delete node #${editingId}?`)) return;
-  nodes = nodes.filter(n => n.id !== editingId);
-  removeMarker(editingId);
-  saveNodes(); updateSidebar(); closeModal();
-  toast(`Node #${editingId} deleted`, 'success');
+  const id = editingId;
+  nodes = nodes.filter(n => n.id !== id);
+  removeMarker(id);
+  deleteNode(id);
+  updateSidebar(); closeModal();
+  toast(`Node #${id} deleted`, 'success');
 };
 
 // ─────────────────────────────────────────────
-// SHEET SYNC (read intensities)
+// APPS SCRIPT API
 // ─────────────────────────────────────────────
 function setSyncStatus(state, msg) {
-  const dot = document.getElementById('sync-dot');
-  const txt = document.getElementById('sync-status');
-  dot.className = 'sync-dot ' + state;
-  txt.textContent = msg;
+  document.getElementById('sync-dot').className = 'sync-dot ' + state;
+  document.getElementById('sync-status').textContent = msg;
 }
 
-async function updateFromSheet() {
-  if (!sheetUrl) { toast('No Sheet URL configured', 'error'); return; }
-  setSyncStatus('loading', 'Syncing…');
+async function fetchNodes() {
+  if (!scriptUrl) { toast('No Script URL configured', 'error'); return; }
+  setSyncStatus('loading', 'Loading…');
   try {
-    const url = sheetUrl.includes('?') ? sheetUrl + '&t=' + Date.now() : sheetUrl + '?t=' + Date.now();
-    const res = await fetch(url);
+    const res = await fetch(scriptUrl + '?action=get');
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const text = await res.text();
-    const rows = parseCSV(text);
-    if (rows.length < 2) throw new Error('Sheet appears empty');
-
-    // Find columns (case-insensitive)
-    const headers = rows[0].map(h => h.trim().toLowerCase());
-    const idCol = headers.findIndex(h => h === 'id');
-    const intCol = headers.findIndex(h => h.includes('intensity'));
-    if (idCol === -1 || intCol === -1) throw new Error('Sheet must have "ID" and "Intensity" columns');
-
-    let updated = 0;
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      const id = parseInt(row[idCol]);
-      const intensity = (row[intCol] || '').trim().toLowerCase();
-      if (!id || !INTENSITY_COLORS[intensity]) continue;
-      const n = nodes.find(x => x.id === id);
-      if (n && n.intensity !== intensity) {
-        n.intensity = intensity; refreshMarkerIcon(n); updated++;
-      }
-    }
-
-    saveNodes(); updateSidebar();
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    nodes = data;
+    renderAllMarkers();
     const now = new Date().toLocaleTimeString();
-    setSyncStatus('ok', `Synced at ${now}`);
+    setSyncStatus('ok', `Loaded at ${now}`);
     document.getElementById('sb-sync').textContent = now;
-    toast(`Updated ${updated} node${updated !== 1 ? 's' : ''}`, 'success');
+    toast(`Loaded ${nodes.length} node${nodes.length !== 1 ? 's' : ''}`, 'success');
   } catch(e) {
-    setSyncStatus('err', 'Sync failed');
-    toast('Sync failed: ' + e.message, 'error');
+    setSyncStatus('err', 'Load failed');
+    toast('Load failed: ' + e.message, 'error');
   }
 }
 
-// Minimal CSV parser
-function parseCSV(text) {
-  return text.split('\n').filter(r => r.trim()).map(row => {
-    const result = []; let cur = ''; let inQ = false;
-    for (let i = 0; i < row.length; i++) {
-      if (row[i] === '"') { inQ = !inQ; }
-      else if (row[i] === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-      else { cur += row[i]; }
-    }
-    result.push(cur.trim()); return result;
-  });
-}
-
-// ─────────────────────────────────────────────
-// SYNC NEW NODE TO SHEET (append row via fetch to a Google Apps Script)
-// Users must deploy an Apps Script to enable write-back.
-// If no script URL is set, we just show a manual reminder.
-// ─────────────────────────────────────────────
-async function syncNewNodeToSheet(node) {
-  const scriptUrl = localStorage.getItem('compoundmap_script');
-  if (!scriptUrl) {
-    toast(`Node #${node.id} added. Remember to add it to your Sheet!`, '');
-    return;
-  }
+async function pushNode(node) {
+  if (!scriptUrl) return;
   try {
-    await fetch(scriptUrl + `?action=add&id=${node.id}&intensity=${node.intensity}`);
-  } catch(e) { /* silent */ }
+    await fetch(`${scriptUrl}?action=set&id=${node.id}&intensity=${node.intensity}&lat=${node.lat}&lng=${node.lng}`);
+  } catch(e) { toast('Save failed: ' + e.message, 'error'); }
+}
+
+async function deleteNode(id) {
+  if (!scriptUrl) return;
+  try {
+    await fetch(`${scriptUrl}?action=delete&id=${id}`);
+  } catch(e) { toast('Delete failed: ' + e.message, 'error'); }
 }
 
 // ─────────────────────────────────────────────
 // CONFIG UI
 // ─────────────────────────────────────────────
 document.getElementById('btn-save-config').onclick = function() {
-  sheetUrl = document.getElementById('sheet-url').value.trim();
+  scriptUrl = document.getElementById('sheet-url').value.trim();
   saveConfig();
   toast('Config saved', 'success');
 };
 
-document.getElementById('btn-test-sheet').onclick = updateFromSheet;
-document.getElementById('btn-update').onclick = updateFromSheet;
+document.getElementById('btn-test-sheet').onclick = fetchNodes;
+document.getElementById('btn-update').onclick = fetchNodes;
 
 // ─────────────────────────────────────────────
 // TOAST
@@ -602,9 +556,11 @@ function toast(msg, type = '') {
 // INIT
 // ─────────────────────────────────────────────
 loadConfig();
-loadNodes();
-renderAllMarkers();
-updateSidebar();
+if (scriptUrl) {
+  fetchNodes();
+} else {
+  setSyncStatus('', 'Paste Script URL and save');
+}
 </script>
 </body>
 </html>

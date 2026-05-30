@@ -199,14 +199,10 @@ map.fitBounds(bounds);
 
 document.getElementById('loading-overlay').style.display = 'none';
 
-// ── Load state from localStorage (shared with editor) ────
+// ── Load config (script URL) from localStorage ────
 function loadConfig() {
-  try { const c = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; sheetUrl = c.sheetUrl || ''; } catch(e) {}
+  try { const c = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; sheetUrl = c.scriptUrl || ''; } catch(e) {}
 }
-function loadNodes() {
-  try { nodes = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { nodes = []; }
-}
-function saveNodes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes)); }
 
 // ── Markers ──────────────────────────────────
 function makeIcon(node) {
@@ -244,62 +240,32 @@ function updateCounts() {
   });
 }
 
-// ── Sheet sync ────────────────────────────────
+// ── Apps Script fetch ─────────────────────────
 function setSyncStatus(state, msg) {
   document.getElementById('sync-dot').className = 'sync-dot ' + state;
   document.getElementById('sync-status').textContent = msg;
 }
 
-function parseCSV(text) {
-  return text.split('\n').filter(r => r.trim()).map(row => {
-    const result = []; let cur = ''; let inQ = false;
-    for (let i = 0; i < row.length; i++) {
-      if (row[i] === '"') { inQ = !inQ; }
-      else if (row[i] === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-      else { cur += row[i]; }
-    }
-    result.push(cur.trim()); return result;
-  });
-}
-
-async function updateFromSheet() {
-  if (!sheetUrl) { toast('No Sheet URL — ask the editor to configure it', 'error'); return; }
-  setSyncStatus('loading', 'Syncing…');
+async function fetchNodes() {
+  if (!sheetUrl) { setSyncStatus('err', 'No Script URL'); return; }
+  setSyncStatus('loading', 'Loading…');
   try {
-    const url = sheetUrl.includes('?') ? sheetUrl + '&t=' + Date.now() : sheetUrl + '?t=' + Date.now();
-    const res = await fetch(url);
+    const res = await fetch(sheetUrl + '?action=get');
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const text = await res.text();
-    const rows = parseCSV(text);
-    if (rows.length < 2) throw new Error('Sheet appears empty');
-
-    const headers = rows[0].map(h => h.trim().toLowerCase());
-    const idCol = headers.findIndex(h => h === 'id');
-    const intCol = headers.findIndex(h => h.includes('intensity'));
-    if (idCol === -1 || intCol === -1) throw new Error('Missing ID or Intensity columns');
-
-    let updated = 0;
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      const id = parseInt(row[idCol]);
-      const intensity = (row[intCol] || '').trim().toLowerCase();
-      if (!id || !INTENSITY_COLORS[intensity]) continue;
-      const n = nodes.find(x => x.id === id);
-      if (n && n.intensity !== intensity) { n.intensity = intensity; updated++; }
-    }
-
-    saveNodes(); renderAllMarkers();
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    nodes = data;
+    renderAllMarkers();
     const now = new Date().toLocaleTimeString();
-    setSyncStatus('ok', `Synced ${now}`);
+    setSyncStatus('ok', `Loaded ${now}`);
     document.getElementById('sb-sync').textContent = now;
-    toast(`${updated} node${updated !== 1 ? 's' : ''} updated`, 'success');
   } catch(e) {
-    setSyncStatus('err', 'Sync failed');
-    toast('Sync failed: ' + e.message, 'error');
+    setSyncStatus('err', 'Load failed');
+    toast('Load failed: ' + e.message, 'error');
   }
 }
 
-document.getElementById('btn-update').onclick = updateFromSheet;
+document.getElementById('btn-update').onclick = fetchNodes;
 
 // ── Toast ─────────────────────────────────────
 let toastTimer;
@@ -312,9 +278,7 @@ function toast(msg, type = '') {
 
 // ── Init ──────────────────────────────────────
 loadConfig();
-loadNodes();
-renderAllMarkers();
-setSyncStatus(nodes.length ? 'ok' : '', nodes.length ? 'Loaded from cache' : 'No data yet');
+fetchNodes();
 </script>
 </body>
 </html>
