@@ -400,10 +400,17 @@ function panToNode(id) {
 const modal = document.getElementById('modal');
 let selectedIntensity = 'none';
 
+function nextAvailableId() {
+  const used = new Set(nodes.map(n => n.id));
+  let i = 1;
+  while (used.has(i)) i++;
+  return i;
+}
+
 function openModal(node) {
   modal.classList.add('open');
   document.getElementById('modal-title').textContent = node ? `Edit Node #${node.id}` : 'New Node';
-  document.getElementById('modal-id').value = node ? node.id : '';
+  document.getElementById('modal-id').value = node ? node.id : nextAvailableId();
   document.getElementById('modal-delete').style.display = node ? 'block' : 'none';
   document.getElementById('id-error').classList.remove('show');
   document.getElementById('modal-id').classList.remove('error');
@@ -431,9 +438,9 @@ document.getElementById('modal-save').onclick = function() {
   const newId = parseInt(idInput.value);
   const errEl = document.getElementById('id-error');
 
-  if (!newId || newId < 1) {
+  if (!Number.isInteger(newId) || newId < 1) {
     idInput.classList.add('error');
-    errEl.textContent = 'Enter a valid number'; errEl.classList.add('show'); return;
+    errEl.textContent = 'Must be a whole number greater than 0'; errEl.classList.add('show'); return;
   }
 
   // Conflict check (exclude self when editing)
