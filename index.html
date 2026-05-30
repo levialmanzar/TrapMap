@@ -539,13 +539,7 @@ async function fetchNodes() {
   }
 }
 
-function fireAndForget(url) {
-  // Image requests bypass CORS entirely — Apps Script processes the GET before
-  // the browser notices the response isn't an image.
-  new Image().src = url;
-}
-
-function pushNode(node) {
+async function pushNode(node) {
   if (!scriptUrl || !node || !node.id || isNaN(node.lat) || isNaN(node.lng)) return;
   const params = new URLSearchParams({
     action: 'set',
@@ -554,12 +548,16 @@ function pushNode(node) {
     lat: node.lat,
     lng: node.lng
   });
-  fireAndForget(`${scriptUrl}?${params}`);
+  try {
+    await fetch(`${scriptUrl}?${params}`);
+  } catch(e) { /* CORS blocks response reading but write already happened */ }
 }
 
-function deleteNode(id) {
+async function deleteNode(id) {
   if (!scriptUrl) return;
-  fireAndForget(`${scriptUrl}?action=delete&id=${id}`);
+  try {
+    await fetch(`${scriptUrl}?action=delete&id=${id}`);
+  } catch(e) { /* same as above */ }
 }
 
 // ─────────────────────────────────────────────

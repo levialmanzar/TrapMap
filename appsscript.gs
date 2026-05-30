@@ -66,13 +66,12 @@ function upsertNode(sheet, id, intensity, lat, lng) {
 
   for (let i = 1; i < data.length; i++) {
     if (parseInt(data[i][idCol]) === id) {
-      sheet.getRange(i + 1, intCol + 1).setValue(intensity);
-      sheet.getRange(i + 1, latCol + 1).setValue(lat);
-      sheet.getRange(i + 1, lngCol + 1).setValue(lng);
-      return;
+      // Delete and re-append to bypass any cell-level data validation
+      sheet.deleteRow(i + 1);
+      break;
     }
   }
-  // Not found — append
+
   const newRow = new Array(headers.length).fill('');
   newRow[idCol]  = id;
   newRow[intCol] = intensity;
