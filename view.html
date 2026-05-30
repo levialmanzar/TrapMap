@@ -113,10 +113,12 @@
   .toast.error { border-color: var(--extreme-color); color: var(--extreme-color); }
 
   .loading-overlay {
-    position: absolute; inset: 0; background: rgba(15,17,23,0.85);
+    position: absolute; inset: 0; background: rgba(10,12,18,0.92);
     display: flex; align-items: center; justify-content: center;
-    z-index: 500; flex-direction: column; gap: 12px;
+    z-index: 500; flex-direction: column; gap: 14px;
+    transition: opacity 0.4s;
   }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
   .spinner {
     width: 32px; height: 32px; border: 3px solid var(--border);
     border-top-color: var(--accent); border-radius: 50%;
@@ -195,8 +197,10 @@ const bounds = [[0,0],[IMG_H,IMG_W]];
 const overlay = L.imageOverlay(IMG_URL, bounds).addTo(map);
 map.fitBounds(bounds);
 
-overlay.on('load', () => { document.getElementById('loading-overlay').style.display = 'none'; });
-overlay.on('error', () => { document.getElementById('loading-overlay').style.display = 'none'; });
+function hideLoadingOverlay() {
+  const el = document.getElementById('loading-overlay');
+  if (el) el.classList.add('hidden');
+}
 
 // ── Load config (script URL) from localStorage ────
 function loadConfig() {}
@@ -240,7 +244,7 @@ function setSyncStatus(state, msg) {
 }
 
 async function fetchNodes() {
-  if (!sheetUrl) { setSyncStatus('err', 'No Script URL'); return; }
+  if (!sheetUrl) { setSyncStatus('err', 'No Script URL'); hideLoadingOverlay(); return; }
   setSyncStatus('loading', 'Loading…');
   try {
     const res = await fetch(sheetUrl + '?action=get');
@@ -255,6 +259,8 @@ async function fetchNodes() {
   } catch(e) {
     setSyncStatus('err', 'Load failed');
     toast('Load failed: ' + e.message, 'error');
+  } finally {
+    hideLoadingOverlay();
   }
 }
 
