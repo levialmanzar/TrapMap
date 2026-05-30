@@ -200,17 +200,11 @@
 
 <div class="main">
   <div class="sidebar">
-    <!-- Config -->
+    <!-- Sync status -->
     <div class="sidebar-section">
-      <div class="sidebar-label">Apps Script URL</div>
-      <input class="config-input" id="sheet-url" placeholder="Paste deployed script URL…" />
-      <div style="margin-top:8px; display:flex; gap:6px;">
-        <button class="btn-primary" style="flex:1;font-size:10px;" id="btn-save-config">Save</button>
-        <button class="btn-ghost" style="font-size:10px;" id="btn-test-sheet">Test</button>
-      </div>
-      <div style="margin-top:8px;display:flex;align-items:center;">
+      <div style="display:flex;align-items:center;">
         <span class="sync-dot" id="sync-dot"></span>
-        <span class="status-item" id="sync-status">Not connected</span>
+        <span class="status-item" id="sync-status">Connecting…</span>
       </div>
     </div>
 
@@ -286,18 +280,10 @@ let nodes = [];
 let markers = {};
 let editingId = null;
 let pendingLatLng = null;
-let scriptUrl = '';
+const scriptUrl = 'https://script.google.com/macros/s/AKfycbyIwaoWbDzwdTkr4XpQBxb1vSeZ9x361JdAoxagH5Y6ZkaPcONfimDh4Yl179FOv_wuLw/exec';
 
-function saveConfig() {
-  localStorage.setItem(CONFIG_KEY, JSON.stringify({ scriptUrl }));
-}
-function loadConfig() {
-  try {
-    const c = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {};
-    scriptUrl = c.scriptUrl || '';
-    document.getElementById('sheet-url').value = scriptUrl;
-  } catch(e) {}
-}
+function saveConfig() {}
+function loadConfig() {}
 
 // ─────────────────────────────────────────────
 // MAP INIT
@@ -532,13 +518,6 @@ async function deleteNode(id) {
 // ─────────────────────────────────────────────
 // CONFIG UI
 // ─────────────────────────────────────────────
-document.getElementById('btn-save-config').onclick = function() {
-  scriptUrl = document.getElementById('sheet-url').value.trim();
-  saveConfig();
-  toast('Config saved', 'success');
-};
-
-document.getElementById('btn-test-sheet').onclick = fetchNodes;
 document.getElementById('btn-update').onclick = fetchNodes;
 
 // ─────────────────────────────────────────────

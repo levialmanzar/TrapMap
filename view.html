@@ -186,7 +186,7 @@ const INTENSITY_COLORS = {
 
 let nodes = [];
 let markers = {};
-let sheetUrl = '';
+const sheetUrl = 'https://script.google.com/macros/s/AKfycbyIwaoWbDzwdTkr4XpQBxb1vSeZ9x361JdAoxagH5Y6ZkaPcONfimDh4Yl179FOv_wuLw/exec';
 
 // ── Map init ──────────────────────────────────
 const IMG_URL = 'https://raw.githubusercontent.com/levialmanzar/TrapMap/main/Assets/Images/AMERIGE_HEIGHTS_COMMUNITY.jpg';
@@ -200,9 +200,7 @@ map.fitBounds(bounds);
 document.getElementById('loading-overlay').style.display = 'none';
 
 // ── Load config (script URL) from localStorage ────
-function loadConfig() {
-  try { const c = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; sheetUrl = c.scriptUrl || ''; } catch(e) {}
-}
+function loadConfig() {}
 
 // ── Markers ──────────────────────────────────
 function makeIcon(node) {
