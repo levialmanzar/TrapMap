@@ -9,29 +9,38 @@
 const SHEET_NAME = 'Sheet1';
 
 function doGet(e) {
-  const action = e.parameter.action;
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME);
+  try {
+    const action = e.parameter.action;
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAME);
 
-  if (action === 'get') {
-    return jsonResponse(getAllNodes(sheet));
-  }
-  if (action === 'set') {
-    const id        = parseInt(e.parameter.id);
-    const intensity = e.parameter.intensity;
-    const lat       = parseFloat(e.parameter.lat);
-    const lng       = parseFloat(e.parameter.lng);
-    if (!id || isNaN(lat) || isNaN(lng)) return jsonResponse({ error: 'Invalid params' });
-    upsertNode(sheet, id, intensity, lat, lng);
-    return jsonResponse({ ok: true });
-  }
-  if (action === 'delete') {
-    const id = parseInt(e.parameter.id);
-    deleteNode(sheet, id);
-    return jsonResponse({ ok: true });
-  }
+    if (action === 'get') {
+      return jsonResponse(getAllNodes(sheet));
+    }
+    if (action === 'set') {
+      const id        = parseInt(e.parameter.id);
+      const intensity = toTitleCase(e.parameter.intensity);
+      const lat       = parseFloat(e.parameter.lat);
+      const lng       = parseFloat(e.parameter.lng);
+      if (!id || isNaN(lat) || isNaN(lng)) return jsonResponse({ error: 'Invalid params' });
+      upsertNode(sheet, id, intensity, lat, lng);
+      return jsonResponse({ ok: true });
+    }
+    if (action === 'delete') {
+      const id = parseInt(e.parameter.id);
+      deleteNode(sheet, id);
+      return jsonResponse({ ok: true });
+    }
 
-  return jsonResponse({ error: 'Unknown action' });
+    return jsonResponse({ error: 'Unknown action' });
+  } catch(err) {
+    return jsonResponse({ error: err.toString() });
+  }
+}
+
+function toTitleCase(str) {
+  if (!str) return 'None';
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
 function getAllNodes(sheet) {
@@ -48,7 +57,7 @@ function getAllNodes(sheet) {
     if (!id) continue;
     nodes.push({
       id,
-      intensity: String(row[intCol] || 'None').trim(),
+      intensity: toTitleCase(String(row[intCol] || 'None').trim()),
       lat: parseFloat(row[latCol]) || 0,
       lng: parseFloat(row[lngCol]) || 0,
     });

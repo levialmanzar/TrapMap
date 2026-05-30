@@ -438,7 +438,12 @@ function openModal(node) {
   document.getElementById('modal-delete').style.display = node ? 'block' : 'none';
   document.getElementById('id-error').classList.remove('show');
   document.getElementById('modal-id').classList.remove('error');
-  selectedIntensity = node ? node.intensity : 'None';
+  if (node && node.intensity) {
+    const i = node.intensity;
+    selectedIntensity = i.charAt(0).toUpperCase() + i.slice(1).toLowerCase();
+  } else {
+    selectedIntensity = 'None';
+  }
   document.querySelectorAll('.intensity-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.val === selectedIntensity);
   });
