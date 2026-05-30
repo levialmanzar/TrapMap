@@ -152,12 +152,6 @@
       <div class="count-card"><div class="count-num" id="cnt-extreme" style="color:var(--extreme-color)">0</div><div class="count-lbl">Extreme</div></div>
     </div>
 
-    <hr class="divider"/>
-
-    <div class="status-item" style="display:flex;align-items:center;margin-top:4px;">
-      <span class="sync-dot" id="sync-dot"></span>
-      <span id="sync-status" style="font-size:10px;">Loading…</span>
-    </div>
   </div>
 
   <div style="position:relative;flex:1;display:flex;flex-direction:column;">
@@ -238,14 +232,8 @@ function updateCounts() {
 }
 
 // ── Apps Script fetch ─────────────────────────
-function setSyncStatus(state, msg) {
-  document.getElementById('sync-dot').className = 'sync-dot ' + state;
-  document.getElementById('sync-status').textContent = msg;
-}
-
 async function fetchNodes() {
-  if (!sheetUrl) { setSyncStatus('err', 'No Script URL'); hideLoadingOverlay(); return; }
-  setSyncStatus('loading', 'Loading…');
+  if (!sheetUrl) { hideLoadingOverlay(); return; }
   try {
     const res = await fetch(sheetUrl + '?action=get');
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -253,11 +241,8 @@ async function fetchNodes() {
     if (data.error) throw new Error(data.error);
     nodes = data;
     renderAllMarkers();
-    const now = new Date().toLocaleTimeString();
-    setSyncStatus('ok', `Loaded ${now}`);
-    document.getElementById('sb-sync').textContent = now;
+    document.getElementById('sb-sync').textContent = new Date().toLocaleTimeString();
   } catch(e) {
-    setSyncStatus('err', 'Load failed');
     toast('Load failed: ' + e.message, 'error');
   } finally {
     hideLoadingOverlay();
