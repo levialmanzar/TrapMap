@@ -209,7 +209,7 @@
   <div class="logo">Amerige Heights <span>Trap Map</span></div>
   <div class="mode-badge">Edit Mode</div>
   <div class="header-actions">
-    <button class="btn-success" id="btn-update">⟳ Update from Sheet</button>
+    <button class="btn-success" id="btn-save-all">↑ Save Map</button>
     <button class="btn-ghost" onclick="window.open('view.html','_blank')">View Client Map ↗</button>
   </div>
 </header>
@@ -587,7 +587,14 @@ async function deleteNode(id) {
 // ─────────────────────────────────────────────
 // CONFIG UI
 // ─────────────────────────────────────────────
-document.getElementById('btn-update').onclick = fetchNodes;
+document.getElementById('btn-save-all').onclick = async function() {
+  if (!nodes.length) { toast('No traps to save', ''); return; }
+  this.disabled = true;
+  for (const n of nodes) await pushNode(n);
+  stampSaved();
+  this.disabled = false;
+  toast(`Saved ${nodes.length} trap${nodes.length !== 1 ? 's' : ''}`, 'success');
+};
 
 // ─────────────────────────────────────────────
 // TOAST
