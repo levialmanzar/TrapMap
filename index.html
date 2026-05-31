@@ -590,7 +590,7 @@ async function deleteNode(id) {
 document.getElementById('btn-save-all').onclick = async function() {
   if (!nodes.length) { toast('No traps to save', ''); return; }
   this.disabled = true;
-  for (const n of nodes) await pushNode(n);
+  await Promise.all(nodes.map(n => pushNode(n)));
   stampSaved();
   this.disabled = false;
   toast(`Saved ${nodes.length} trap${nodes.length !== 1 ? 's' : ''}`, 'success');
