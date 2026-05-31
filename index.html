@@ -376,7 +376,7 @@ function addMarker(node) {
     // Use marker reference to find current id in case node was renamed
     const currentId = Object.keys(markers).find(k => markers[k] === e.target);
     const n = nodes.find(x => x.id === parseInt(currentId));
-    if (n) { n.lat = ll.lat; n.lng = ll.lng; pushNode(n); }
+    if (n) { n.lat = ll.lat; n.lng = ll.lng; pushNode(n); toast(`Trap #${n.id} saved`, 'success'); }
   });
 
   markers[node.id] = marker;
