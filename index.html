@@ -599,17 +599,9 @@ async function deleteNode(id) {
 document.getElementById('btn-save-all').onclick = async function() {
   if (!nodes.length) { toast('No traps to save', ''); return; }
   this.disabled = true;
-  try {
-    await fetch(scriptUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      body: JSON.stringify(nodes)
-    });
-    stampSaved();
-    toast(`Saved ${nodes.length} trap${nodes.length !== 1 ? 's' : ''}`, 'success');
-  } catch(e) {
-    toast('Save failed: ' + e.message, 'error');
-  }
+  await Promise.all(nodes.map(n => pushNode(n)));
+  stampSaved();
+  toast(`Saved ${nodes.length} trap${nodes.length !== 1 ? 's' : ''}`, 'success');
   this.disabled = false;
 };
 
