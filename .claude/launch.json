@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "trapmap",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "8080", "/Users/leviticusalmanzar/Documents/TrapMap"],
+      "port": 8080
+    }
+  ]
+}
