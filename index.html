@@ -378,10 +378,14 @@ function addMarker(node) {
 
   marker.on('dragend', function(e) {
     const ll = e.target.getLatLng();
-    // Use marker reference to find current id in case node was renamed
+    const clampedLat = Math.max(0, Math.min(IMG_H, ll.lat));
+    const clampedLng = Math.max(0, Math.min(IMG_W, ll.lng));
+    if (clampedLat !== ll.lat || clampedLng !== ll.lng) {
+      e.target.setLatLng([clampedLat, clampedLng]);
+    }
     const currentId = Object.keys(markers).find(k => markers[k] === e.target);
     const n = nodes.find(x => x.id === parseInt(currentId));
-    if (n) { n.lat = ll.lat; n.lng = ll.lng; pushNode(n); stampSaved(); toast(`Trap #${n.id} saved`, 'success'); }
+    if (n) { n.lat = clampedLat; n.lng = clampedLng; pushNode(n); stampSaved(); toast(`Trap #${n.id} saved`, 'success'); }
   });
 
   markers[node.id] = marker;
