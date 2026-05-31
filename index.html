@@ -590,10 +590,17 @@ async function deleteNode(id) {
 document.getElementById('btn-save-all').onclick = async function() {
   if (!nodes.length) { toast('No traps to save', ''); return; }
   this.disabled = true;
-  await Promise.all(nodes.map(n => pushNode(n)));
-  stampSaved();
+  try {
+    await fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify(nodes)
+    });
+    stampSaved();
+    toast(`Saved ${nodes.length} trap${nodes.length !== 1 ? 's' : ''}`, 'success');
+  } catch(e) {
+    toast('Save failed: ' + e.message, 'error');
+  }
   this.disabled = false;
-  toast(`Saved ${nodes.length} trap${nodes.length !== 1 ? 's' : ''}`, 'success');
 };
 
 // ─────────────────────────────────────────────
