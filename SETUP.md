@@ -62,13 +62,14 @@ Do this in **both files** and re-upload them to GitHub.
 1. Create a new Google Sheet
 2. Name the columns exactly:
 
-| A  | B         |
-|----|-----------|
-| ID | Intensity |
-| 1  | none      |
-| 2  | medium    |
+| A       | B              |
+|---------|----------------|
+| Trap ID | Activity Level |
+| 1       | 0              |
+| 2       | 2              |
 
-   Intensity values must be: `none`, `light`, `medium`, or `extreme`
+   Activity Level is a number: `0` = None, `1` = Light, `2` = Moderate, `3` = Heavy
+   (legacy text values like `none`/`light`/`medium`/`extreme` still work)
 
 3. Go to **File → Share → Publish to web**
 4. Change "Web page" to **Comma-separated values (.csv)**
@@ -112,7 +113,7 @@ The URL is stored in your browser. To share it across devices, paste the same UR
 
 **"Sync failed" error:**
 - Make sure the Sheet is published as CSV (not as a web page)
-- Check that column headers are exactly `ID` and `Intensity`
+- Check that column headers are `Trap ID` and `Activity Level` (or legacy `ID` / `Intensity`)
 - Make sure the Sheet is set to "Anyone with link can view"
 
 **Nodes disappeared:**

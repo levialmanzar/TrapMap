@@ -4,15 +4,16 @@
 //   Copy the deployment URL and paste it into both index.html and view.html as the Script URL.
 //
 // Your sheet must have this header row (row 1):
-//   ID | Intensity | Lat | Lng
+//   Trap ID | Activity Level | Lat | Lng
+// (legacy titles "ID" and "Intensity" are also accepted)
 //
-// Intensity is stored as a number: 0=None, 1=Light, 2=Medium, 3=Extreme
+// Activity Level is stored as a number: 0=None, 1=Light, 2=Moderate, 3=Heavy
 
 const SHEET_NAME = 'Sheet1';
 
-// ── Intensity conversions ────────────────────────────────────────────────────
-const INTENSITY_TEXT_TO_NUM = { none: 0, light: 1, medium: 2, extreme: 3 };
-const INTENSITY_NUM_TO_TEXT = { 0: 'None', 1: 'Light', 2: 'Medium', 3: 'Extreme' };
+// ── Activity level conversions ───────────────────────────────────────────────
+const INTENSITY_TEXT_TO_NUM = { none: 0, light: 1, moderate: 2, heavy: 3, medium: 2, extreme: 3 };
+const INTENSITY_NUM_TO_TEXT = { 0: 'None', 1: 'Light', 2: 'Moderate', 3: 'Heavy' };
 
 function intensityToNum(str) {
   if (str === null || str === undefined || str === '') return 0;
@@ -57,13 +58,21 @@ function doGet(e) {
 }
 
 // ── Sheet helpers ─────────────────────────────────────────────────────────────
+// Accepts both new ("Trap ID", "Activity Level") and legacy ("ID", "Intensity") titles
+function getCols(data) {
+  const headers = data[0].map(h => String(h).trim().toLowerCase());
+  return {
+    count: headers.length,
+    idCol:  headers.findIndex(h => h === 'trap id' || h === 'id'),
+    intCol: headers.findIndex(h => h.includes('activity') || h.includes('intensity')),
+    latCol: headers.indexOf('lat'),
+    lngCol: headers.indexOf('lng'),
+  };
+}
+
 function getAllNodes(sheet) {
   const data = sheet.getDataRange().getValues();
-  const headers = data[0].map(h => String(h).trim().toLowerCase());
-  const idCol  = headers.indexOf('id');
-  const intCol = headers.findIndex(h => h.includes('intensity'));
-  const latCol = headers.indexOf('lat');
-  const lngCol = headers.indexOf('lng');
+  const { idCol, intCol, latCol, lngCol } = getCols(data);
   const nodes = [];
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
@@ -81,11 +90,7 @@ function getAllNodes(sheet) {
 
 function upsertNode(sheet, id, intensity, lat, lng) {
   const data = sheet.getDataRange().getValues();
-  const headers = data[0].map(h => String(h).trim().toLowerCase());
-  const idCol  = headers.indexOf('id');
-  const intCol = headers.findIndex(h => h.includes('intensity'));
-  const latCol = headers.indexOf('lat');
-  const lngCol = headers.indexOf('lng');
+  const { count, idCol, intCol, latCol, lngCol } = getCols(data);
 
   for (let i = 1; i < data.length; i++) {
     if (parseInt(data[i][idCol]) === id) {
@@ -94,7 +99,7 @@ function upsertNode(sheet, id, intensity, lat, lng) {
     }
   }
 
-  const newRow = new Array(headers.length).fill('');
+  const newRow = new Array(count).fill('');
   newRow[idCol]  = id;
   newRow[intCol] = intensity;  // numeric value (0–3)
   newRow[latCol] = lat;
@@ -104,8 +109,7 @@ function upsertNode(sheet, id, intensity, lat, lng) {
 
 function deleteNode(sheet, id) {
   const data = sheet.getDataRange().getValues();
-  const headers = data[0].map(h => String(h).trim().toLowerCase());
-  const idCol = headers.indexOf('id');
+  const { idCol } = getCols(data);
   for (let i = data.length - 1; i >= 1; i--) {
     if (parseInt(data[i][idCol]) === id) {
       sheet.deleteRow(i + 1);
